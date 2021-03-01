@@ -1,8 +1,8 @@
 # Library Imports
 import numpy as np
-import Box2D
 import gym
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 # DDPG Reinforcement Learning
 class ReplayBuffer:

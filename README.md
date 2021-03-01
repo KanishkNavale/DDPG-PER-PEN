@@ -1,5 +1,5 @@
 # DDPG Algorithm for Continuous Action RL
-Tensorflow based DQN Agent for 'MountainCar-V0' openai gym environment
+DDPG algorithm incorporates Actor-Critic Deep Learning Agent for solving continuous action reinforcement learning problems.
 
 ## Source
 * This code is based on 'https://www.youtube.com/watch?v=4jh32CvwKYw'
