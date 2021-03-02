@@ -7,7 +7,7 @@ DDPG algorithm incorporates Actor-Critic Deep Learning Agent for solving continu
 ## Result
 1. Algorithm was used to solve 'LunarLanderContinous-V2' openai-gym environment.
 * Training Avg. Reward history over episodes,
-<p ><img src="Acc_Rewards.png" width="500" ></p>
+<p ><img src="Avg_Rewards.png" width="500" ></p>
 
 
 ## Dependencies

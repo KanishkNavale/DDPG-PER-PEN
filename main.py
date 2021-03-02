@@ -167,6 +167,29 @@ class Agent:
         actor_network_gradient = tape.gradient(actor_loss, self.actor.trainable_variables)
         self.actor.optimizer.apply_gradients(zip(actor_network_gradient, self.actor.trainable_variables))
         self.update_networks()
+        
+def plot_results(data, smoothing):
+    y = []
+    sum = []
+    smoothing = int(smoothing)
+    for i, point in enumerate(data):
+        sum.append(point)
+        if len(sum) == smoothing:
+            mean = np.array(sum).mean()
+            for i in range(len(sum)):
+                y.append(mean)
+            sum = []
+    if len(sum) > 0:
+        mean = np.array(sum).mean()
+        for i in range(len(sum)):
+            y.append(mean)
+    
+    assert len(data) == len(y)
+    plt.plot(data, c='red', alpha=0.25)
+    plt.plot(y, c='red')
+    plt.xlabel('Episodes')
+    plt.ylabel('Avg. Episodic Reward')
+    plt.savefig("Avg_Rewards.png")
 
 # Main
 if __name__ == "__main__":
@@ -215,11 +238,8 @@ if __name__ == "__main__":
             if not load_checkpoint:
                 agent.save_models()
 
-        print(f'Episode: {i} \t Avg. Episodic Reward: {np.around(score,4)}')  
+        print(f'Episode: {i} \t Avg. Episodic Reward: {score:.4f}')  
+        np.save('score_history', score_history, allow_pickle=False)
     
     # Plot the Avg. Episode Reward history    
-    plt.plot(score_history, c='red')
-    plt.xlabel('Episodes')
-    plt.ylabel('Accumulated Rewards')
-    plt.grid(True)
-    plt.savefig('Acc_Rewards.png')
+    plot_results(score_history, 5)
