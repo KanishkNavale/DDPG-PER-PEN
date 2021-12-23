@@ -47,6 +47,7 @@ class Critic(nn.Module):
         self.H3 = nn.Linear(density, density)
         self.H4 = nn.Linear(density, density)
         self.Q = nn.Linear(density, 1)
+        T.nn.init.uniform_(self.Q.weight.data, -0.003, 0.003)
 
         self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.to(device)
@@ -81,15 +82,22 @@ class Actor(nn.Module):
         self.H3 = nn.Linear(density, density)
         self.H4 = nn.Linear(density, density)
         self.mu = nn.Linear(density, n_actions)
+        T.nn.init.uniform_(self.mu.weight.data, -0.003, 0.003)
+
+        self.bn = nn.LayerNorm(density)
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.to(device)
 
     def forward(self, state):
         action = F.relu(self.H1(state))
+        action = self.bn(action)
         action = F.relu(self.H2(action))
+        action = self.bn(action)
         action = F.relu(self.H3(action))
+        action = self.bn(action)
         action = F.relu(self.H4(action))
+        action = self.bn(action)
         action = T.tanh(self.mu(action))
         return action
 
