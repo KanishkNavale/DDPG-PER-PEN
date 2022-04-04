@@ -2,10 +2,6 @@ import os
 import numpy as np
 import json
 
-import torch
-
-from sklearn.decomposition import PCA
-
 import gym
 
 import matplotlib.pyplot as plt
@@ -13,12 +9,20 @@ import matplotlib.pyplot as plt
 from DDPG import Agent
 
 
-def predict_value(agent: Agent, state: np.ndarray) -> float:
-    with torch.no_grad():
-        state = torch.as_tensor(state, dtype=torch.float32, device=agent.actor.device)
-        action = torch.as_tensor(agent.choose_action(state), dtype=torch.float32, device=agent.actor.device)
-        value = agent.critic.forward(state, action)
-    return value.item()
+def collect_trajectories(env: gym.Env, agent: Agent, n_games: int = 10) -> np.ndarray:
+
+    for _ in range(n_games):
+        state = env.reset()
+        done: bool = False
+        state_history: list[np.ndarray] = []
+
+        while not done:
+            state_history.append(state)
+            action = agent.choose_action(state)
+            next_state, _, done, _ = env.step(action)
+            state = next_state
+
+    return np.vstack(state_history)
 
 
 if __name__ == "__main__":
@@ -44,20 +48,7 @@ if __name__ == "__main__":
     average = [data["Moving Mean of Episodic Rewards"] for data in train_data]
     test = [data["Test Score"] for data in test_data]
 
-    # Process network data
-    initial_state = 1e6 * np.ones(env.observation_space.shape[0])
-    final_state = -1e6 * np.ones(env.observation_space.shape[0])
-    steps: int = 500
-    states = np.linspace(initial_state, final_state, steps)
-
-    # Compress the states to 2D
-    state = np.vstack(states)
-    pca = PCA(n_components=1)
-    compressed_states = pca.fit_transform(state)
-    assert np.allclose(pca.explained_variance_ratio_[0], 1.0)
-
-    # Fetch values
-    values = [predict_value(agent, pca.inverse_transform(state)) for state in compressed_states]
+    trajectory = collect_trajectories(env, agent)
 
     # Generate graphs
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
@@ -75,11 +66,13 @@ if __name__ == "__main__":
     axes[1].set_xlabel('Test Run')
     axes[1].set_title('Testing Profile')
 
-    axes[2].plot(compressed_states, values)
+    axes[2].plot(trajectory[:, 0], trajectory[:, 1], label='Position')
+    axes[2].plot(trajectory[:, 2], trajectory[:, 3], label='Velocity')
     axes[2].grid(True)
-    axes[2].set_xlabel('State: Principal Axes-1 (VAR = 1.0)')
-    axes[2].set_ylabel('State-Action Values')
-    axes[2].set_title("Critic Value Estimation")
+    axes[2].legend(loc='best')
+    axes[2].set_xlabel('x1')
+    axes[2].set_ylabel('x2')
+    axes[2].set_title("Trajectory Plot")
 
     fig.tight_layout()
     plt.savefig(os.path.join(data_path, 'DDPG Agent Profiling.png'))
