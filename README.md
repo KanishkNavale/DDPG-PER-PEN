@@ -1,20 +1,33 @@
-# DDPG Algorithm for Continuous Action RL
-DDPG algorithm incorporates Actor-Critic Deep Learning Agent for solving continuous action reinforcement learning problems.
+# DDPG with Parametric Noise Exploration & Prioritized Experience Replay Buffer
 
-## Result
-------------------------- OLD Implementation -> Vanilla DDPG ------------------------------
-1. Algorithm was used to solve 'LunarLanderContinous-V2' openai-gym environment.
-* Training Avg. Reward history over episodes,
-<p ><img src="old/Avg_Rewards.png" width="500" ></p>
+This repository implements a DDPG agent with parametric noise for exploration and prioritized experience replay buffer to train the agent faster and better for the openai-gym's "LunarLanderContinuous-v2".
 
+Let's see how fast and better it is!
+
+## STATUS
+
+    Work in Progress!
+
+## Agent Profile
+
+1. DDPG + PNE + PER
+
+    <img src="DDPG-PNE-PER/data/PNDDPG Agent Profiling.png"/>
+
+2. Vanilla DDPG (I like Vanilla that is why! :>)
+
+    <img src="Vanilla-DDPG/data/DDPG Agent Profiling.png"/>
 
 ## Dependencies
-Install dependencies using:
+
+Install dependencies using this,
+
 ```bash
-pip3 install -r requirements.txt 
+pip install -r requirements.txt 
 ```
-## Challenge
-* Achieve the goal position with minimum episode steps
 
 ## Contact
-* email: navalekanishk@gmail.com
+
+- Name: Kanishk Navale
+- Email: navalekanishk@gmail.com
+- Website: <https://kanishknavale.github.io/>
