@@ -4,10 +4,6 @@ This repository implements a DDPG agent with parametric noise for exploration an
 
 Let's see how fast and better it is!
 
-## STATUS
-
-    Work in Progress!
-
 ## Agent Profile
 
 1. DDPG + PNE + PER
@@ -25,6 +21,10 @@ Install dependencies using this,
 ```bash
 pip install -r requirements.txt 
 ```
+
+## TODO
+
+    - Add adaptive parametric noise for exploration
 
 ## Contact
 

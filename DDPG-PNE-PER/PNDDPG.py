@@ -13,33 +13,6 @@ from replay_buffers.utils import LinearSchedule
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-class AdaptiveParamNoiseSpec(object):
-    def __init__(self, initial_stddev=0.1, desired_action_stddev=0.1, adoption_coefficient=1.01):
-        self.initial_stddev = initial_stddev
-        self.desired_action_stddev = desired_action_stddev
-        self.adoption_coefficient = adoption_coefficient
-
-        self.current_stddev = initial_stddev
-
-    def adapt(self, distance):
-        if distance > self.desired_action_stddev:
-            # Decrease stddev.
-            self.current_stddev /= self.adoption_coefficient
-        else:
-            # Increase stddev.
-            self.current_stddev *= self.adoption_coefficient
-
-    def get_stats(self):
-        stats = {
-            'param_noise_stddev': self.current_stddev,
-        }
-        return stats
-
-    def __repr__(self):
-        fmt = 'AdaptiveParamNoiseSpec(initial_stddev={}, desired_action_stddev={}, adoption_coefficient={})'
-        return fmt.format(self.initial_stddev, self.desired_action_stddev, self.adoption_coefficient)
-
-
 class Critic(torch.nn.Module):
     """Defines a Critic Deep Learning Network"""
 
@@ -104,10 +77,18 @@ class Actor(torch.nn.Module):
 
 
 class Agent:
-    def __init__(self, env: Env, datapath: str = 'tmp/', n_games: int = 250, training: bool = True,
-                 alpha=1e-3, beta=2e-3, gamma=0.99, tau=0.005,
-                 batch_size: int = 64, noise: str = 'normal',
-                 per_alpha: float = 0.6, per_beta: float = 0.4):
+    def __init__(self,
+                 env: Env,
+                 datapath: str = 'tmp/',
+                 n_games: int = 250,
+                 training: bool = True,
+                 alpha=1e-3,
+                 beta=2e-3,
+                 gamma=0.99,
+                 tau=0.005,
+                 batch_size: int = 64,
+                 per_alpha: float = 0.6,
+                 per_beta: float = 0.4):
 
         self.gamma = torch.tensor(gamma, dtype=torch.float32, device=device)
         self.tau = tau
@@ -122,37 +103,28 @@ class Agent:
         self.beta_scheduler = LinearSchedule(n_games, per_beta, 1.0)
 
         self.batch_size = batch_size
-        self.noise = noise
         self.max_action = torch.as_tensor(env.action_space.high, dtype=torch.float32, device=device)
         self.min_action = torch.as_tensor(env.action_space.low, dtype=torch.float32, device=device)
 
         self.actor = Actor(self.obs_shape, self.n_actions, alpha, name='actor')
+        self.noisy_actor = Actor(self.obs_shape, self.n_actions, alpha, name='actor')
         self.critic = Critic(self.obs_shape + self.n_actions, beta, name='critic')
         self.target_actor = Actor(self.obs_shape, self.n_actions, alpha, name='target_actor')
         self.target_critic = Critic(self.obs_shape + self.n_actions, beta, name='target_critic')
 
-        if self.noise == 'normal':
-            self.noise_param: float = 0.1
-
-        else:
-            raise NotImplementedError("This noise is not implmented!")
-
         self._update_networks()
 
-    def _update_networks(self, tau: float = 1.0):
+    def perturb_actor(self) -> None:
+        for actor_weights, noisy_actor_weights in zip(self.actor.parameters(), self.noisy_actor.parameters()):
+            noise = torch.ones_like(actor_weights).uniform_(0.0, 1e-6)
+            noisy_actor_weights.data.copy_(actor_weights.data + noise)
 
+    def _update_networks(self, tau: float = 1.0):
         for critic_weights, target_critic_weights in zip(self.critic.parameters(), self.target_critic.parameters()):
             target_critic_weights.data.copy_(tau * critic_weights.data + (1.0 - tau) * target_critic_weights.data)
 
         for actor_weights, target_actor_weights in zip(self.actor.parameters(), self.target_actor.parameters()):
             target_actor_weights.data.copy_(tau * actor_weights.data + (1.0 - tau) * target_actor_weights.data)
-
-    def _add_exploration_noise(self, action: torch.Tensor) -> torch.Tensor:
-        if self.noise == 'normal':
-            noise = np.random.uniform(0.0, self.noise_param, action.shape)
-            action += torch.as_tensor(noise, dtype=torch.float32, device=device)
-
-        return action
 
     def _action_scaling(self, action: torch.Tensor) -> torch.Tensor:
         neural_min = -1.0 * torch.ones_like(action)
@@ -166,10 +138,11 @@ class Agent:
     def choose_action(self, observation: np.ndarray) -> np.ndarray:
         self.actor.eval()
         state = torch.as_tensor(observation, dtype=torch.float32, device=device)
-        action = self.actor.forward(state)
 
         if self.is_training:
-            action = self._add_exploration_noise(action)
+            action = self.noisy_actor.forward(state)
+        else:
+            action = self.actor.forward(state)
 
         action = self._action_scaling(action)
 
@@ -192,7 +165,7 @@ class Agent:
             return
 
         beta = self.beta_scheduler.value(self.optim_steps)
-        state, action, reward, new_state, done, weights, indices = self.memory.sample(self.batch_size, beta)
+        state, action, reward, new_state, done, _, indices = self.memory.sample(self.batch_size, beta)
 
         state = torch.as_tensor(np.vstack(state), dtype=torch.float32, device=device)
         action = torch.as_tensor(np.vstack(action), dtype=torch.float32, device=device)

@@ -38,6 +38,7 @@ if __name__ == '__main__':
 
         # Initial Reset of Environment
         state = env.reset()
+        agent.perturb_actor()
 
         while not done:
             action = agent.choose_action(state)
